@@ -11,7 +11,9 @@ https://github.com/nathanmarz/storm/wiki
 
 This is my storm playground experimenting with Machine learning in Storm with VowPal wabbit. 
 
-One bolt predicts sentiment using vowpal wabbit logistic regression named sent.model and another computes if the user is a bot or human using some arbitrary calculation (note this is just an experiment in making bolts compute several functions at once rather than an accurate way of measuring of bots)
+One stream of bolt predicts sentiment using vowpal wabbit regression named sent.model.
+
+Another stream computes if the user is a bot or human using some arbitrary calculation (*note* this is just an experiment in making bolts compute several functions at once rather than an accurate way of measuring bots).  Finally the two streams are aggregated and the output shows the sentiment together with the bot or human feature of a user.
 
 
 the aclImdb corpus is used, the original training and test data can be found in ~/storm-ml-play/vwtraining/aclImdb.tar.gz
