@@ -6,7 +6,7 @@
 	(:require [taoensso.carmine :as car])
 	)
 
-;a very basic webserver redis pub sub
+;a very basic webservice using redis pub sub to pull data out of the Storm topology
 
 (def listerner 
 	(car/with-new-pubsub-listener

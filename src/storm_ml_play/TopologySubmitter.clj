@@ -1,5 +1,5 @@
 (ns storm-ml-play.TopologySubmitter
-  (:require [yodit-storm.topology :refer [storm-topology]]
+  (:require [storm-ml-play.topology :refer [storm-topology]]
             [backtype.storm [config :refer :all]])
   (:import [backtype.storm StormSubmitter])
   (:gen-class))
