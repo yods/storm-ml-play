@@ -8,9 +8,11 @@
   (:use [backtype.storm clojure config]))
 
 (def username? 
+  "Is the word a username"
   (fn [x] (= (str(first x)) "@")))
 
 (def stopwords
+  "list of all stopwords from the stopwords text file "
   (let [all (slurp (java.io.FileReader. "/home/yodit/storm-ml-play/src/storm_ml_play/stopwords.txt"))]
     (seq (.split all "\n"))))
 
@@ -31,13 +33,16 @@
     (reduce #(or %1 %2) (map #(= %1 item) stopwords))))
 
 (defn remover [xs f]
+  "removes a word from a seq of words"
   (remove f (seq (.split xs " "))))
 
 (def stopremover
+  "removes stop words"
   (fn [x]
       (remove seq-contains? x)))
 
 (def existsImdb
+  "checks if word is in IMDB corpus list"
   (fn [x]
     (> x -1)))
 
@@ -45,17 +50,21 @@
   (clojure.string/replace word #"(?i)[^\w']+" ""))
 
 (defn somet [x]
+  "the colon is necessary to format the text for vowpal wabbit"
   (str(first x) ":" (str(second x))))
 
 (defn makeFeatures [x]
+  "turn words into an appropriate features format for vw"
   (clojure.string/join " " (cons "|features" (map somet x))))
 
 (defn vw [x]
+  "calls the sentiment analysis model"
   (exec/sh-pipe
    ["echo" x]
    ["vw" "-i" "/home/yodit/storm-ml-play/vwtraining/sent.model" "--quiet" "-p"  "/dev/stdout"]))
 
 (defbolt englishTweets ["engtweet"]
+  "filter out english lang tweets"
   [{tweet :tweet :as tuple} collector]
   (if (= (:lang tweet) "en")
     (emit-bolt! collector [tweet] :anchor tuple))
@@ -63,6 +72,7 @@
 
 
 (defbolt cleanText ["id" "cleantweet"]
+  "remove usernames and stop words from the tweet"
   [{engtweet :engtweet :as tuple} collector]
   (let [newtweet
         (update-in (update-in engtweet [:text] clojure.string/lower-case)
@@ -74,6 +84,7 @@
   (ack! collector tuple)  )
 
 (defbolt wordFeatures ["id" "features"]
+  "takes in words and outputs features list"
   [{cleantweet :cleantweet :as tuple} collector]
   (let [text (map remove-punctuation (:text cleantweet))
         index (filter existsImdb (map indexer text)) 
@@ -86,6 +97,7 @@
 
 ;vw -i sent.model -t -p /dev/stdout --quiet
 (defbolt vwClassifier ["id" "pred"]
+  "classifies the sentiment"
   [{features :features :as tuple} collector]
   (let [id (:id tuple)
         output (vw features)
@@ -96,6 +108,7 @@
   (ack! collector tuple))
 
 (defn isType? [ff tf]
+  "calculates bot or human on arbitrary ratio"
   (if (or (> ff 4) (> tf 5)) "bot" "human"))
 
 (defn ratio [x y]
@@ -103,6 +116,7 @@
     0 (unchecked-divide-int x y)))
 
 (defbolt predictBot ["id" "type"]
+  "based on characteristics is it a bot or human"
   [{engtweet :engtweet :as tuple} collector]
   (let [id (:id engtweet)
         follower (:followers engtweet)
@@ -119,6 +133,7 @@
   )
 
 (defbolt aggregate ["type" "pred"] {:prepare true}
+  "aggregate the two streams on the id of the tuple"
   [conf context collector]
   (let [tuples (atom {})]
     (bolt
@@ -145,6 +160,7 @@
   (wcar (car/publish "tweets" tuple)))
 
 (defbolt publisher ["message"]
+  "send to redis pub sub"
   [tuple collector]
   (let [id (:id tuple)
         type (:type tuple)
